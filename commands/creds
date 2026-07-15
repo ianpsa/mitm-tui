@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Show captured credentials
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+echo "=== Credentials ==="
+cat "$BASE_DIR/captures/creds_found.txt" 2>/dev/null || echo "(none)"
+echo ""
+echo "=== NTLM Hashes ==="
+cat "$BASE_DIR/captures/responder_hashes.txt" 2>/dev/null || echo "(none)"
+echo ""
+echo "=== DNS Spoof Log ==="
+tail -20 "$BASE_DIR/captures/dns_spoof.log" 2>/dev/null || echo "(none)"

@@ -16,7 +16,7 @@
 
 <br>
 
-&emsp; Depois fui adicionando modulos mais exóticos: **AnyDesk Attack Suite**, descoberta de hosts na porta 7070, fingerprinting de versão por certificado TLS, avaliação de CVEs (CVE-2025-27918, CVE-2020-13160). **Enumeração SMB** com impacket pra verificar assinatura, modos de segurança, shares anônimos. **Captura VoIP** com ARP spoof entre telefones IP e extração de SIP/RTP. **Descoberta de câmeras** via RTSP/ONVIF probe. **Credential Hunter** passivo que monitora tráfego HTTP em tempo real atrás de senhas, tokens JWT, Basic Auth. **Detecção de vazamento mDNS** que captura nomes de dispositivos Bonjour expostos na LAN (iPhone, MacBook, Android). E por fim um **kit de exploração completo** (`captures/exploit_kit.sh`) que orquestra tudo em 6 fases: Recon > AnyDesk > MiTM/Responder > DNS Spoof/Cred > SMB Attack > Relatório.
+&emsp; Depois fui adicionando modulos mais exóticos: **AnyDesk Attack Suite**, descoberta de hosts na porta 7070, fingerprinting de versão por certificado TLS, avaliação de CVEs (CVE-2025-27918, CVE-2020-13160). **Enumeração SMB** com impacket pra verificar assinatura, modos de segurança, shares anônimos. **Captura VoIP** com ARP spoof entre telefones IP e extração de SIP/RTP. **Descoberta de câmeras** via RTSP/ONVIF probe. **Credential Hunter** passivo que monitora tráfego HTTP em tempo real atrás de senhas, tokens JWT, Basic Auth. **Detecção de vazamento mDNS** que captura nomes de dispositivos Bonjour expostos na LAN (iPhone, MacBook, Android). E por fim um **kit de exploração completo** que orquestra tudo em 6 fases: Recon > AnyDesk > MiTM/Responder > DNS Spoof/Cred > SMB Attack > Relatório.
 
 <br>
 
@@ -24,9 +24,7 @@
 
 <br>
 
-> obs: sim, tem arquivo de captura com dados reais commitado no repositório. sim, eu sei que é uma péssima prática. não, não vou tirar.
 
-<br>
 
 ### Como rodar
 
@@ -56,9 +54,7 @@ mitm-tui/
 │   ├── adalove_fake.py      Página fake Adalove + Gmail
 │   ├── fake_login_server.py Servidor fake Microsoft 365 + Gmail
 │   ├── responder_targeted.py Multi-poisoner (NBT-NS, LLMNR, mDNS, WPAD, SMB)
-│   ├── deprecated/          Responders legados
-│   └── adalove_assets/      SVG da página fake Adalove
-└── captures/                Logs, PCAPs, credenciais capturadas
+│   └── deprecated/          Responders legados
 ```
 
 ### Funcionalidades
@@ -76,7 +72,6 @@ mitm-tui/
 | 9 | **Camera Discovery** | RTSP/ONVIF probe |
 | 10 | **mDNS Leak** | Captura nomes Bonjour (iPhone, MacBook, Android) |
 | 11 | **PCAP Analysis** | Protocolos, top talkers, DNS, hosts HTTP |
-| 12 | **Exploit Kit** | Script standalone com 6 fases de exploração |
 
 ### Exemplos de uso
 
@@ -92,9 +87,6 @@ sudo python3 tools/responder_targeted.py 192.168.1.100
 
 # Proxy HTTPS transparente
 sudo mitmdump --mode transparent -s tools/mitm_intercept.py
-
-# Kit de exploração completo
-sudo bash captures/exploit_kit.sh
 ```
 
 ### Referências

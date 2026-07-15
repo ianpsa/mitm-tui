@@ -48,7 +48,8 @@ mitm-tui/
 │   ├── scan                 Scan rápido de rede
 │   ├── attack               Ataque completo automatizado
 │   ├── creds                Exibir credenciais capturadas
-│   └── dns-spoof            DNS spoof + fake login
+│   ├── dns-spoof            DNS spoof + fake login
+│   └── exploit-kit          Kit de exploração completo (6 fases)
 ├── tools/
 │   ├── mitm_intercept.py    Addon mitmproxy (SSL strip + typosquat)
 │   ├── adalove_fake.py      Página fake Adalove + Gmail
@@ -87,6 +88,9 @@ sudo python3 tools/responder_targeted.py 192.168.1.100
 
 # Proxy HTTPS transparente
 sudo mitmdump --mode transparent -s tools/mitm_intercept.py
+
+# Kit de exploração completo
+sudo bash commands/exploit-kit
 ```
 
 ### Referências

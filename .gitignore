@@ -1,6 +1,8 @@
 captures/*
 !captures/exploit_kit.sh
 de
+tools/adalove_fake.py
+tools/adalove_assets/
 __pycache__/
 *.pyc
 *.pcap

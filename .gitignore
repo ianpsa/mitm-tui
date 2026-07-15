@@ -1,5 +1,4 @@
-captures/*
-!captures/exploit_kit.sh
+captures/
 de
 tools/adalove_fake.py
 tools/adalove_assets/

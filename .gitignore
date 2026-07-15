@@ -1,0 +1,7 @@
+captures/*
+!captures/exploit_kit.sh
+de
+__pycache__/
+*.pyc
+*.pcap
+*.flow

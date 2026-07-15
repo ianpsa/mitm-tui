@@ -4,7 +4,7 @@
 
 <br>
 
-&emsp; A base do framework é um loop TUI com `whiptail` que expõe um menu cheio de firula. Toda a detecção de rede é automática: interface, IP, gateway, CIDR; então é só rodar `sudo bash mitm_tui.sh` e escolher a maldade. O coração do bicho é um ARP spoof bidirecional com iptables NAT/MASQUERADE que redireciona o tráfego da vítima pra passar pela máquina atacante. Em cima disso, empilhei `dnsspoof`, `mitmdump` com addon de SSL stripping, um responder caseiro em Python (NBT-NS + LLMNR + mDNS + WPAD + SMB fake), e uma coleção de páginas de login falsas, Microsoft 365, Gmail e Adalove (plataforma do Inteli), que são assustadoramente fiéis.
+&emsp; A base do framework é um loop TUI com `whiptail` que expõe um menu cheio de firula. Toda a detecção de rede é automática: interface, IP, gateway, CIDR; então é só rodar `sudo bash mitm_tui.sh` e escolher a maldade. O coração do bicho é um ARP spoof bidirecional com iptables NAT/MASQUERADE que redireciona o tráfego da vítima pra passar pela máquina atacante. Em cima disso, empilhei `dnsspoof`, `mitmdump` com addon de SSL stripping, um responder caseiro em Python (NBT-NS + LLMNR + mDNS + WPAD + SMB fake), e uma coleção de páginas de login falsas, Microsoft 365 e Gmail, que são assustadoramente fiéis.
 
 <br>
 
@@ -12,7 +12,7 @@
 
 <br>
 
-&emsp; As páginas de login falso foram um capítulo à parte. A da Microsoft 365 tem processo de duas etapas (email > senha), validação de campo, animação de loading, design Fluent UI, a porra toda. A da Adalove eu tive que fazer engenharia reversa no CSS da plataforma real pra copiar cada detalhe, até o toggle do olho no campo de senha. Os assets SVG estão embutidos no próprio código em base64, porque servir arquivo estático é pra quem tem estrutura. Testei com um moleque do apartamento ao lado que caiu no phishing e digitei a senha dele. Me senti o Kevin Mitnick por 5 minutos (e culpado por mais 10).
+&emsp; As páginas de login falso foram um capítulo à parte. A da Microsoft 365 tem processo de duas etapas (email > senha), validação de campo, animação de loading, design Fluent UI, a porra toda. Os assets ficam embutidos no próprio código em base64, porque servir arquivo estático é pra quem tem estrutura.
 
 <br>
 
@@ -20,7 +20,7 @@
 
 <br>
 
-&emsp; Durante os testes reais na rede aqui de casa, consegui capturar credenciais reais do Adalove (ianpereira2004vital@gmail.com / 40p2et, sim, ta no log, não julgo), descobri uma STB IPTV da operadora (ARRIS VIP4242H) com user_id exposto, e envenenei consultas mDNS de um Chromecast na rede. O `exploit_suggestions.txt` gerou recomendações baseadas nos serviços encontrados: AnyDesk, SMB, XMPP, MQTT, câmeras, Steam. Tudo documentado, tudo funcionando.
+&emsp; Durante os testes na rede local, descobri uma STB IPTV da operadora (ARRIS VIP4242H) com user_id exposto, e envenenei consultas mDNS de um Chromecast na rede. O `exploit_suggestions.txt` gerou recomendações baseadas nos serviços encontrados: AnyDesk, SMB, XMPP, MQTT, câmeras, Steam.
 
 <br>
 
@@ -52,7 +52,6 @@ mitm-tui/
 │   └── exploit-kit          Kit de exploração completo (6 fases)
 ├── tools/
 │   ├── mitm_intercept.py    Addon mitmproxy (SSL strip + typosquat)
-│   ├── adalove_fake.py      Página fake Adalove + Gmail
 │   ├── fake_login_server.py Servidor fake Microsoft 365 + Gmail
 │   ├── responder_targeted.py Multi-poisoner (NBT-NS, LLMNR, mDNS, WPAD, SMB)
 │   └── deprecated/          Responders legados
@@ -64,7 +63,7 @@ mitm-tui/
 |---|--------|-----------|
 | 1 | **ARP Spoof** | Envenenamento bidirecional vítima ↔ gateway |
 | 2 | **DNS Spoof** | Redireciona domínios específicos para páginas falsas |
-| 3 | **Fake Login** | Páginas Microsoft 365, Gmail, Adalove (alta fidelidade) |
+| 3 | **Fake Login** | Páginas Microsoft 365 e Gmail (alta fidelidade) |
 | 4 | **Responder** | NBT-NS, LLMNR, mDNS, WPAD, SMB fake (multi-thread) |
 | 5 | **SMB Enum** | Shares, assinatura, modos de segurança (impacket) |
 | 6 | **AnyDesk Suite** | Descoberta (7070), fingerprint TLS, CVEs |
